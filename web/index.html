@@ -72,6 +72,35 @@
 
           <div id="workItemBox" class="work-item-box"></div>
 
+          <form id="dryRunForm" class="dry-run-form">
+            <div class="panel-heading">
+              <h2 data-i18n="dryRunTitle">本地工作流 Dry-run</h2>
+            </div>
+            <div class="dry-run-grid">
+              <label>
+                <span data-i18n="productKey">产品键</span>
+                <input id="dryRunProduct" data-i18n-placeholder="productKeyPlaceholder" placeholder="本地配置中的产品键" />
+              </label>
+              <label>
+                <span data-i18n="components">组件</span>
+                <input id="dryRunComponents" data-i18n-placeholder="componentsPlaceholder" placeholder="android,flutter" />
+              </label>
+              <label>
+                <span data-i18n="customer">客户线</span>
+                <input id="dryRunCustomer" data-i18n-placeholder="customerPlaceholder" placeholder="universal" />
+              </label>
+              <label>
+                <span data-i18n="slug">英文描述</span>
+                <input id="dryRunSlug" data-i18n-placeholder="slugPlaceholder" placeholder="short-english-desc" />
+              </label>
+            </div>
+            <label class="checkbox-row">
+              <input id="dryRunMrContext" type="checkbox" />
+              <span data-i18n="mrContext">生成 MR 上下文</span>
+            </label>
+            <button type="submit" data-i18n="runLocalDryRun">运行本地 dry-run</button>
+          </form>
+
           <div class="role-grid" id="roleGrid"></div>
 
           <div class="actions">

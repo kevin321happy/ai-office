@@ -259,6 +259,33 @@ button.secondary.dark:hover {
   margin-top: 18px;
 }
 
+.dry-run-form {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: none;
+  margin-top: 18px;
+  padding: 14px;
+}
+
+.dry-run-form.visible {
+  display: flex;
+}
+
+.dry-run-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.checkbox-row {
+  align-items: center;
+  flex-direction: row;
+}
+
+.checkbox-row input {
+  width: auto;
+}
+
 .work-item-box.visible {
   display: block;
 }
@@ -302,5 +329,9 @@ button.secondary.dark:hover {
 
   .role-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .dry-run-grid {
+    grid-template-columns: 1fr;
   }
 }

@@ -48,6 +48,17 @@ const messages = {
     shortId: '短 ID',
     branchName: '计划分支',
     confidence: '置信度',
+    dryRunTitle: '本地工作流 Dry-run',
+    productKey: '产品键',
+    productKeyPlaceholder: '本地配置中的产品键',
+    components: '组件',
+    componentsPlaceholder: 'android,flutter',
+    customer: '客户线',
+    customerPlaceholder: 'universal',
+    slug: '英文描述',
+    slugPlaceholder: 'short-english-desc',
+    mrContext: '生成 MR 上下文',
+    runLocalDryRun: '运行本地 dry-run',
     noTasksYet: '暂无任务。',
     noDescription: '暂无描述。',
     noEvents: '暂无事件。',
@@ -99,6 +110,17 @@ const messages = {
     shortId: 'Short ID',
     branchName: 'Planned branch',
     confidence: 'Confidence',
+    dryRunTitle: 'Local Workflow Dry-run',
+    productKey: 'Product key',
+    productKeyPlaceholder: 'Product key from local config',
+    components: 'Components',
+    componentsPlaceholder: 'android,flutter',
+    customer: 'Customer',
+    customerPlaceholder: 'universal',
+    slug: 'English slug',
+    slugPlaceholder: 'short-english-desc',
+    mrContext: 'Generate MR context',
+    runLocalDryRun: 'Run local dry-run',
     noTasksYet: 'No tasks yet.',
     noDescription: 'No description.',
     noEvents: 'No events.',
@@ -130,6 +152,12 @@ const els = {
   artifacts: document.querySelector('#artifacts'),
   workflowRefreshButton: document.querySelector('#workflowRefreshButton'),
   workflowIndex: document.querySelector('#workflowIndex'),
+  dryRunForm: document.querySelector('#dryRunForm'),
+  dryRunProduct: document.querySelector('#dryRunProduct'),
+  dryRunComponents: document.querySelector('#dryRunComponents'),
+  dryRunCustomer: document.querySelector('#dryRunCustomer'),
+  dryRunSlug: document.querySelector('#dryRunSlug'),
+  dryRunMrContext: document.querySelector('#dryRunMrContext'),
 };
 
 function detectLocale() {
@@ -163,6 +191,32 @@ function toggleLocale() {
   renderTasks();
   renderWorkflowIndex();
   if (state.selectedPayload) renderDetail(state.selectedPayload);
+}
+
+function loadDryRunSettings() {
+  const raw = localStorage.getItem('ai-office-dry-run-settings');
+  if (!raw) return;
+  const settings = JSON.parse(raw);
+  els.dryRunProduct.value = settings.product || '';
+  els.dryRunComponents.value = settings.components || '';
+  els.dryRunCustomer.value = settings.customer || '';
+  els.dryRunSlug.value = settings.slug || '';
+  els.dryRunMrContext.checked = Boolean(settings.mr_context);
+}
+
+function saveDryRunSettings() {
+  localStorage.setItem('ai-office-dry-run-settings', JSON.stringify(readDryRunSettings()));
+}
+
+function readDryRunSettings() {
+  return {
+    product: els.dryRunProduct.value.trim(),
+    components: els.dryRunComponents.value.trim(),
+    customer: els.dryRunCustomer.value.trim(),
+    slug: els.dryRunSlug.value.trim(),
+    mr_context: els.dryRunMrContext.checked,
+    branch_plan: true,
+  };
 }
 
 async function request(path, options = {}) {
@@ -257,6 +311,7 @@ function renderDetail(payload) {
   els.detailStatus.textContent = task.status;
   els.detailDescription.textContent = task.description || t('noDescription');
   renderWorkItem(task.work_item, task.source_url);
+  renderDryRunForm(task.work_item);
 
   const roles = task.roles || {};
   els.roleGrid.innerHTML = ['planner', 'developer', 'reviewer', 'validator']
@@ -296,6 +351,13 @@ function renderDetail(payload) {
       `;
       els.artifacts.appendChild(item);
     }
+  }
+}
+
+function renderDryRunForm(workItem) {
+  els.dryRunForm.classList.toggle('visible', Boolean(workItem));
+  if (workItem && !els.dryRunSlug.value && workItem.branch_name && workItem.branch_name.includes('/')) {
+    els.dryRunSlug.value = workItem.branch_name.split('/')[1].replace(/-\d{8}$/, '');
   }
 }
 
@@ -351,6 +413,18 @@ async function runStep(actor) {
   await loadTasks();
 }
 
+async function runLocalDryRun(event) {
+  event.preventDefault();
+  if (!state.selectedTaskId) return;
+  const payload = readDryRunSettings();
+  saveDryRunSettings();
+  await request(`/api/tasks/${encodeURIComponent(state.selectedTaskId)}/local-workflow/dry-run`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  await loadTasks();
+}
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll('&', '&amp;')
@@ -363,11 +437,13 @@ function escapeHtml(value) {
 els.taskForm.addEventListener('submit', createTask);
 els.refreshButton.addEventListener('click', loadTasks);
 els.workflowRefreshButton.addEventListener('click', loadLocalWorkflows);
+els.dryRunForm.addEventListener('submit', runLocalDryRun);
 els.languageButton.addEventListener('click', toggleLocale);
 document.querySelectorAll('[data-actor]').forEach((button) => {
   button.addEventListener('click', () => runStep(button.dataset.actor));
 });
 
 applyI18n();
+loadDryRunSettings();
 loadTasks();
 loadLocalWorkflows();

@@ -9,7 +9,7 @@ import mimetypes
 import urllib.parse
 
 from app import storage
-from app.local_workflows import load_index
+from app.local_workflows import load_index, run_work_item_dry_run
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -70,6 +70,18 @@ class AIRequestHandler(BaseHTTPRequestHandler):
             try:
                 task = storage.simulate_step(task_id, actor)
                 self.write_json({"task": task.__dict__})
+            except (FileNotFoundError, ValueError) as exc:
+                self.write_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+            return
+        if parsed.path.startswith("/api/tasks/") and parsed.path.endswith("/local-workflow/dry-run"):
+            task_id = urllib.parse.unquote(parsed.path.removeprefix("/api/tasks/").removesuffix("/local-workflow/dry-run"))
+            payload = self.read_json()
+            try:
+                task = storage.load_task(task_id)
+                result = run_work_item_dry_run(task, storage.task_dir(task_id), payload)
+                storage.write_artifact(task_id, "local-workflow-summary.md", result.report, "local-workflow")
+                storage.append_event(task_id, "LOCAL_WORKFLOW_DRY_RUN", "local-workflow", result.to_dict())
+                self.write_json({"result": result.to_dict(), "task": storage.load_task(task_id).__dict__})
             except (FileNotFoundError, ValueError) as exc:
                 self.write_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
             return
