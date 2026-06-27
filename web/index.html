@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Office</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1 data-i18n="appTitle">AI Office</h1>
+        <p data-i18n="appSubtitle">本地多 AI 员工协同工作台。</p>
+      </div>
+      <div class="top-actions">
+        <button class="secondary dark" id="languageButton" type="button">English</button>
+        <div class="status-pill" id="serverStatus" data-i18n="connecting">连接中</div>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="sidebar">
+        <form id="taskForm" class="panel">
+          <h2 data-i18n="newTask">新建任务</h2>
+          <label>
+            <span data-i18n="title">标题</span>
+            <input id="titleInput" name="title" data-i18n-placeholder="titlePlaceholder" placeholder="搭建 AI Office MVP" required />
+          </label>
+          <label>
+            <span data-i18n="description">描述</span>
+            <textarea id="descriptionInput" name="description" rows="4" data-i18n-placeholder="descriptionPlaceholder" placeholder="目标、背景、验收标准"></textarea>
+          </label>
+          <label>
+            <span data-i18n="risk">风险</span>
+            <select id="riskInput" name="risk">
+              <option value="normal" data-i18n="riskNormal">普通</option>
+              <option value="low" data-i18n="riskLow">低</option>
+              <option value="high" data-i18n="riskHigh">高</option>
+            </select>
+          </label>
+          <button type="submit" data-i18n="createTask">创建任务</button>
+        </form>
+
+        <section class="panel task-list-panel">
+          <div class="panel-heading">
+            <h2 data-i18n="tasks">任务</h2>
+            <button class="secondary" id="refreshButton" type="button" data-i18n="refresh">刷新</button>
+          </div>
+          <div id="taskList" class="task-list"></div>
+        </section>
+      </section>
+
+      <section class="content">
+        <section class="panel detail-panel">
+          <div class="panel-heading">
+            <h2 id="detailTitle" data-i18n="selectTask">选择一个任务</h2>
+            <span id="detailStatus" class="status-pill muted" data-i18n="noTask">无任务</span>
+          </div>
+          <p id="detailDescription" class="description" data-i18n="emptyDetail">创建或选择一个任务来查看协作流程。</p>
+
+          <div class="role-grid" id="roleGrid"></div>
+
+          <div class="actions">
+            <button data-actor="planner" data-i18n="runPlanner">运行规划者</button>
+            <button data-actor="developer" data-i18n="runExecutor">运行执行者</button>
+            <button data-actor="reviewer" data-i18n="runReviewer">运行审查者</button>
+            <button data-actor="validator" data-i18n="runValidator">运行验收者</button>
+          </div>
+        </section>
+
+        <section class="two-column">
+          <section class="panel">
+            <h2 data-i18n="events">事件</h2>
+            <div id="events" class="events"></div>
+          </section>
+          <section class="panel">
+            <h2 data-i18n="artifacts">产物</h2>
+            <div id="artifacts" class="artifacts"></div>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
