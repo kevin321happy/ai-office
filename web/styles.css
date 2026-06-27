@@ -236,7 +236,8 @@ button.secondary.dark:hover {
 }
 
 .events,
-.artifacts {
+.artifacts,
+.workflow-index {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -244,11 +245,22 @@ button.secondary.dark:hover {
 }
 
 .event,
-.artifact {
+.artifact,
+.workflow-item,
+.work-item-box {
   background: #f9fafb;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
   padding: 12px;
+}
+
+.work-item-box {
+  display: none;
+  margin-top: 18px;
+}
+
+.work-item-box.visible {
+  display: block;
 }
 
 .event-title,
@@ -262,6 +274,23 @@ button.secondary.dark:hover {
   font-size: 12px;
   line-height: 1.5;
   margin-top: 6px;
+  overflow-wrap: anywhere;
+}
+
+.kv-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 140px 1fr;
+  margin-top: 10px;
+}
+
+.kv-key {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.kv-value {
+  font-size: 12px;
   overflow-wrap: anywhere;
 }
 

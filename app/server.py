@@ -9,6 +9,7 @@ import mimetypes
 import urllib.parse
 
 from app import storage
+from app.local_workflows import load_index
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,6 +23,9 @@ class AIRequestHandler(BaseHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path == "/api/tasks":
             self.write_json({"tasks": [task.__dict__ for task in storage.list_tasks()]})
+            return
+        if parsed.path == "/api/local-workflows":
+            self.write_json({"local_workflows": load_index().to_dict()})
             return
         if parsed.path.startswith("/api/tasks/"):
             task_id = urllib.parse.unquote(parsed.path.removeprefix("/api/tasks/"))
@@ -37,15 +41,26 @@ class AIRequestHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/tasks":
             payload = self.read_json()
             title = str(payload.get("title", "")).strip()
+            source_url = str(payload.get("source_url", "")).strip()
             if not title:
-                self.write_json({"error": "title is required"}, HTTPStatus.BAD_REQUEST)
+                title = source_url
+            if not title:
+                self.write_json({"error": "title or source_url is required"}, HTTPStatus.BAD_REQUEST)
                 return
-            task = storage.create_task(
-                title=title,
-                description=str(payload.get("description", "")),
-                risk=str(payload.get("risk", "normal")),
-                roles=payload.get("roles") if isinstance(payload.get("roles"), dict) else None,
-            )
+            if source_url:
+                task = storage.create_work_item_task(
+                    source_url=source_url,
+                    title=title if title != source_url else "",
+                    description=str(payload.get("description", "")),
+                    risk=str(payload.get("risk", "normal")),
+                )
+            else:
+                task = storage.create_task(
+                    title=title,
+                    description=str(payload.get("description", "")),
+                    risk=str(payload.get("risk", "normal")),
+                    roles=payload.get("roles") if isinstance(payload.get("roles"), dict) else None,
+                )
             self.write_json({"task": task.__dict__}, HTTPStatus.CREATED)
             return
         if parsed.path.startswith("/api/tasks/") and parsed.path.endswith("/step"):
@@ -109,4 +124,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

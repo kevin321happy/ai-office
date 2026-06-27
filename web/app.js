@@ -2,6 +2,7 @@ const state = {
   tasks: [],
   selectedTaskId: null,
   selectedPayload: null,
+  localWorkflows: null,
   locale: detectLocale(),
 };
 
@@ -16,6 +17,8 @@ const messages = {
     newTask: '新建任务',
     title: '标题',
     titlePlaceholder: '搭建 AI Office MVP',
+    sourceUrl: '工作项链接',
+    sourceUrlPlaceholder: '粘贴工作项链接',
     description: '描述',
     descriptionPlaceholder: '目标、背景、验收标准',
     risk: '风险',
@@ -34,6 +37,17 @@ const messages = {
     runValidator: '运行验收者',
     events: '事件',
     artifacts: '产物',
+    localWorkflows: '本地工作流',
+    workflowDetected: '已检测到本地工作流库',
+    workflowMissing: '未检测到本地工作流库',
+    workflowCommands: '命令索引',
+    workItem: '工作项分析',
+    source: '来源',
+    type: '类型',
+    externalId: '外部 ID',
+    shortId: '短 ID',
+    branchName: '计划分支',
+    confidence: '置信度',
     noTasksYet: '暂无任务。',
     noDescription: '暂无描述。',
     noEvents: '暂无事件。',
@@ -54,6 +68,8 @@ const messages = {
     newTask: 'New Task',
     title: 'Title',
     titlePlaceholder: 'Build AI Office MVP',
+    sourceUrl: 'Work Item URL',
+    sourceUrlPlaceholder: 'Paste work item URL',
     description: 'Description',
     descriptionPlaceholder: 'Goal, context, acceptance criteria',
     risk: 'Risk',
@@ -72,6 +88,17 @@ const messages = {
     runValidator: 'Run Validator',
     events: 'Events',
     artifacts: 'Artifacts',
+    localWorkflows: 'Local Workflows',
+    workflowDetected: 'Local workflow library detected',
+    workflowMissing: 'Local workflow library not detected',
+    workflowCommands: 'Command index',
+    workItem: 'Work item analysis',
+    source: 'Source',
+    type: 'Type',
+    externalId: 'External ID',
+    shortId: 'Short ID',
+    branchName: 'Planned branch',
+    confidence: 'Confidence',
     noTasksYet: 'No tasks yet.',
     noDescription: 'No description.',
     noEvents: 'No events.',
@@ -89,6 +116,7 @@ const els = {
   languageButton: document.querySelector('#languageButton'),
   taskForm: document.querySelector('#taskForm'),
   titleInput: document.querySelector('#titleInput'),
+  sourceUrlInput: document.querySelector('#sourceUrlInput'),
   descriptionInput: document.querySelector('#descriptionInput'),
   riskInput: document.querySelector('#riskInput'),
   refreshButton: document.querySelector('#refreshButton'),
@@ -97,8 +125,11 @@ const els = {
   detailStatus: document.querySelector('#detailStatus'),
   detailDescription: document.querySelector('#detailDescription'),
   roleGrid: document.querySelector('#roleGrid'),
+  workItemBox: document.querySelector('#workItemBox'),
   events: document.querySelector('#events'),
   artifacts: document.querySelector('#artifacts'),
+  workflowRefreshButton: document.querySelector('#workflowRefreshButton'),
+  workflowIndex: document.querySelector('#workflowIndex'),
 };
 
 function detectLocale() {
@@ -130,6 +161,7 @@ function toggleLocale() {
   localStorage.setItem('ai-office-locale', state.locale);
   applyI18n();
   renderTasks();
+  renderWorkflowIndex();
   if (state.selectedPayload) renderDetail(state.selectedPayload);
 }
 
@@ -143,6 +175,35 @@ async function request(path, options = {}) {
     throw new Error(body || response.statusText);
   }
   return response.json();
+}
+
+async function loadLocalWorkflows() {
+  try {
+    const data = await request('/api/local-workflows');
+    state.localWorkflows = data.local_workflows;
+    renderWorkflowIndex();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function renderWorkflowIndex() {
+  if (!els.workflowIndex) return;
+  const index = state.localWorkflows;
+  if (!index) {
+    els.workflowIndex.innerHTML = '<div class="task-meta">-</div>';
+    return;
+  }
+  const title = index.enabled ? t('workflowDetected') : t('workflowMissing');
+  const headings = (index.headings || []).map((heading) => `<li>${escapeHtml(heading)}</li>`).join('');
+  els.workflowIndex.innerHTML = `
+    <div class="workflow-item">
+      <div class="artifact-title">${title}</div>
+      <div class="artifact-path">${escapeHtml(index.root)}</div>
+      <div class="event-body">${t('workflowCommands')}: ${index.commands_file_exists ? 'OK' : '-'}</div>
+      <ul>${headings}</ul>
+    </div>
+  `;
 }
 
 async function loadTasks() {
@@ -195,6 +256,7 @@ function renderDetail(payload) {
   els.detailTitle.textContent = task.title;
   els.detailStatus.textContent = task.status;
   els.detailDescription.textContent = task.description || t('noDescription');
+  renderWorkItem(task.work_item, task.source_url);
 
   const roles = task.roles || {};
   els.roleGrid.innerHTML = ['planner', 'developer', 'reviewer', 'validator']
@@ -237,10 +299,36 @@ function renderDetail(payload) {
   }
 }
 
+function renderWorkItem(workItem, sourceUrl) {
+  els.workItemBox.classList.toggle('visible', Boolean(workItem));
+  if (!workItem) {
+    els.workItemBox.innerHTML = '';
+    return;
+  }
+  const rows = [
+    [t('source'), sourceUrl || '-'],
+    [t('type'), workItem.item_type || '-'],
+    [t('externalId'), workItem.external_id || '-'],
+    [t('shortId'), workItem.short_id || '-'],
+    [t('branchName'), workItem.branch_name || '-'],
+    [t('confidence'), workItem.confidence || '-'],
+  ];
+  els.workItemBox.innerHTML = `
+    <div class="artifact-title">${t('workItem')}</div>
+    <div class="kv-grid">
+      ${rows.map(([key, value]) => `
+        <div class="kv-key">${escapeHtml(key)}</div>
+        <div class="kv-value">${escapeHtml(value)}</div>
+      `).join('')}
+    </div>
+  `;
+}
+
 async function createTask(event) {
   event.preventDefault();
   const payload = {
     title: els.titleInput.value.trim(),
+    source_url: els.sourceUrlInput.value.trim(),
     description: els.descriptionInput.value.trim(),
     risk: els.riskInput.value,
   };
@@ -274,6 +362,7 @@ function escapeHtml(value) {
 
 els.taskForm.addEventListener('submit', createTask);
 els.refreshButton.addEventListener('click', loadTasks);
+els.workflowRefreshButton.addEventListener('click', loadLocalWorkflows);
 els.languageButton.addEventListener('click', toggleLocale);
 document.querySelectorAll('[data-actor]').forEach((button) => {
   button.addEventListener('click', () => runStep(button.dataset.actor));
@@ -281,3 +370,4 @@ document.querySelectorAll('[data-actor]').forEach((button) => {
 
 applyI18n();
 loadTasks();
+loadLocalWorkflows();

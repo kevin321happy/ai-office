@@ -7,6 +7,8 @@ import json
 import re
 from typing import Any
 
+from app.work_item import WorkItemAnalysis, analyze_work_item
+
 
 ROOT = Path(__file__).resolve().parents[1]
 TASKS_DIR = ROOT / "tasks"
@@ -47,6 +49,8 @@ class Task:
     updated_at: str = field(default_factory=lambda: now_iso())
     current_owner: str = "codex"
     tags: list[str] = field(default_factory=list)
+    source_url: str = ""
+    work_item: dict[str, Any] | None = None
 
 
 def now_iso() -> str:
@@ -87,6 +91,8 @@ def create_task(
     risk: str = "normal",
     roles: dict[str, str] | None = None,
     tags: list[str] | None = None,
+    source_url: str = "",
+    work_item: WorkItemAnalysis | None = None,
 ) -> Task:
     ensure_dirs()
     task_id = next_task_id(title)
@@ -101,6 +107,8 @@ def create_task(
         roles=selected_roles,
         current_owner=selected_roles.get("planner", "codex"),
         tags=tags or [],
+        source_url=source_url,
+        work_item=work_item.to_dict() if work_item else None,
     )
     path = task_dir(task_id)
     path.mkdir(parents=True, exist_ok=False)
@@ -110,6 +118,44 @@ def create_task(
     append_event(task_id, "TASK_CREATED", "system", {"title": title, "risk": risk})
     write_default_prompts(task)
     return task
+
+
+def create_work_item_task(
+    source_url: str,
+    title: str = "",
+    description: str = "",
+    risk: str = "normal",
+) -> Task:
+    analysis = analyze_work_item(source_url, title)
+    task_title = title or analysis.title
+    task_description = build_work_item_description(description, analysis)
+    tags = ["work-item", analysis.item_type, analysis.short_id]
+    return create_task(
+        title=task_title,
+        description=task_description,
+        risk=risk,
+        tags=tags,
+        source_url=source_url,
+        work_item=analysis,
+    )
+
+
+def build_work_item_description(description: str, analysis: WorkItemAnalysis) -> str:
+    parts = []
+    if description.strip():
+        parts.append(description.strip())
+    parts.append(
+        "\n".join(
+            [
+                "Work item analysis:",
+                f"- Type: {analysis.item_type}",
+                f"- External ID: {analysis.external_id}",
+                f"- Short ID: {analysis.short_id}",
+                f"- Planned branch: {analysis.branch_name}",
+            ]
+        )
+    )
+    return "\n\n".join(parts)
 
 
 def save_task(task: Task) -> None:
@@ -206,12 +252,15 @@ def write_artifact(task_id: str, name: str, content: str, actor: str = "system")
 
 def write_default_prompts(task: Task) -> None:
     prompts_dir = task_dir(task.id) / "prompts"
+    work_item_block = render_work_item_block(task)
     cursor_prompt = f"""# Cursor 执行任务包
 
 任务：{task.title}
 
 背景：
 {task.description or "待补充。"}
+
+{work_item_block}
 
 角色：执行工程师。
 
@@ -231,6 +280,8 @@ def write_default_prompts(task: Task) -> None:
 
 背景：
 {task.description or "待补充。"}
+
+{work_item_block}
 
 角色：架构/审查负责人。
 
@@ -254,6 +305,8 @@ def write_default_prompts(task: Task) -> None:
 背景：
 {task.description or "待补充。"}
 
+{work_item_block}
+
 角色：技术负责人和最终验收者。
 
 验收重点：
@@ -272,10 +325,29 @@ def write_default_prompts(task: Task) -> None:
     (prompts_dir / "codex-accept.md").write_text(codex_prompt, encoding="utf-8")
 
 
+def render_work_item_block(task: Task) -> str:
+    if not task.work_item:
+        return ""
+    item = task.work_item
+    return "\n".join(
+        [
+            "工作项：",
+            f"- 来源：{task.source_url}",
+            f"- 类型：{item.get('item_type')}",
+            f"- 短 ID：{item.get('short_id')}",
+            f"- 计划分支：{item.get('branch_name')}",
+            "- 真实类型、标题和分支创建必须由本地适配器复核后再执行。",
+        ]
+    )
+
+
 def simulate_step(task_id: str, actor: str) -> Task:
     task = load_task(task_id)
     if actor == "planner":
-        write_artifact(task_id, "plan.md", f"# 执行计划\n\n- 任务：{task.title}\n- Planner：{task.roles.get('planner')}\n- Developer：{task.roles.get('developer')}\n- Reviewer：{task.roles.get('reviewer')}\n- Validator：{task.roles.get('validator')}\n", "codex")
+        branch_line = ""
+        if task.work_item:
+            branch_line = f"- Planned branch: {task.work_item.get('branch_name')}\n"
+        write_artifact(task_id, "plan.md", f"# 执行计划\n\n- 任务：{task.title}\n- Planner：{task.roles.get('planner')}\n- Developer：{task.roles.get('developer')}\n- Reviewer：{task.roles.get('reviewer')}\n- Validator：{task.roles.get('validator')}\n{branch_line}\n## Gates\n\n- Verify work-item metadata before side effects.\n- Keep executor and reviewer separated.\n- Run privacy scan before commit.\n", "codex")
         return update_status(task_id, "PLANNED", "codex", "已生成计划。")
     if actor == "developer":
         write_artifact(task_id, "execution-report.md", "# 执行回执\n\n- 当前为模拟执行。\n- 后续会接入 Cursor / Codex 真实执行器。\n- 未产生真实代码 diff。\n", task.roles.get("developer", "cursor"))

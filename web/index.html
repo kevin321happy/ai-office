@@ -24,7 +24,11 @@
           <h2 data-i18n="newTask">新建任务</h2>
           <label>
             <span data-i18n="title">标题</span>
-            <input id="titleInput" name="title" data-i18n-placeholder="titlePlaceholder" placeholder="搭建 AI Office MVP" required />
+            <input id="titleInput" name="title" data-i18n-placeholder="titlePlaceholder" placeholder="搭建 AI Office MVP" />
+          </label>
+          <label>
+            <span data-i18n="sourceUrl">工作项链接</span>
+            <input id="sourceUrlInput" name="source_url" data-i18n-placeholder="sourceUrlPlaceholder" placeholder="粘贴工作项链接" />
           </label>
           <label>
             <span data-i18n="description">描述</span>
@@ -48,6 +52,14 @@
           </div>
           <div id="taskList" class="task-list"></div>
         </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <h2 data-i18n="localWorkflows">本地工作流</h2>
+            <button class="secondary" id="workflowRefreshButton" type="button" data-i18n="refresh">刷新</button>
+          </div>
+          <div id="workflowIndex" class="workflow-index"></div>
+        </section>
       </section>
 
       <section class="content">
@@ -57,6 +69,8 @@
             <span id="detailStatus" class="status-pill muted" data-i18n="noTask">无任务</span>
           </div>
           <p id="detailDescription" class="description" data-i18n="emptyDetail">创建或选择一个任务来查看协作流程。</p>
+
+          <div id="workItemBox" class="work-item-box"></div>
 
           <div class="role-grid" id="roleGrid"></div>
 
