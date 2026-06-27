@@ -10,6 +10,8 @@ import urllib.parse
 
 from app import storage
 from app.local_workflows import load_index, run_work_item_dry_run
+from app.mvp_flow import run_minimal_mvp
+from app.workers import detect_workers
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -26,6 +28,9 @@ class AIRequestHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/local-workflows":
             self.write_json({"local_workflows": load_index().to_dict()})
+            return
+        if parsed.path == "/api/workers":
+            self.write_json({"workers": [worker.to_dict() for worker in detect_workers()]})
             return
         if parsed.path.startswith("/api/tasks/"):
             task_id = urllib.parse.unquote(parsed.path.removeprefix("/api/tasks/"))
@@ -81,6 +86,16 @@ class AIRequestHandler(BaseHTTPRequestHandler):
                 result = run_work_item_dry_run(task, storage.task_dir(task_id), payload)
                 storage.write_artifact(task_id, "local-workflow-summary.md", result.report, "local-workflow")
                 storage.append_event(task_id, "LOCAL_WORKFLOW_DRY_RUN", "local-workflow", result.to_dict())
+                self.write_json({"result": result.to_dict(), "task": storage.load_task(task_id).__dict__})
+            except (FileNotFoundError, ValueError) as exc:
+                self.write_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+            return
+        if parsed.path.startswith("/api/tasks/") and parsed.path.endswith("/mvp-flow"):
+            task_id = urllib.parse.unquote(parsed.path.removeprefix("/api/tasks/").removesuffix("/mvp-flow"))
+            payload = self.read_json()
+            try:
+                result = run_minimal_mvp(task_id, payload)
+                storage.append_event(task_id, "MVP_FLOW_COMPLETED", "ai-office", result.to_dict())
                 self.write_json({"result": result.to_dict(), "task": storage.load_task(task_id).__dict__})
             except (FileNotFoundError, ValueError) as exc:
                 self.write_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
