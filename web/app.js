@@ -3,6 +3,7 @@ const state = {
   selectedTaskId: null,
   selectedPayload: null,
   localWorkflows: null,
+  workers: [],
   locale: detectLocale(),
 };
 
@@ -38,6 +39,9 @@ const messages = {
     events: '事件',
     artifacts: '产物',
     localWorkflows: '本地工作流',
+    workers: 'AI 员工',
+    available: '可用',
+    unavailable: '不可用',
     workflowDetected: '已检测到本地工作流库',
     workflowMissing: '未检测到本地工作流库',
     workflowCommands: '命令索引',
@@ -59,6 +63,7 @@ const messages = {
     slugPlaceholder: 'short-english-desc',
     mrContext: '生成 MR 上下文',
     runLocalDryRun: '运行本地 dry-run',
+    runMvpFlow: '运行最小 MVP 闭环',
     noTasksYet: '暂无任务。',
     noDescription: '暂无描述。',
     noEvents: '暂无事件。',
@@ -100,6 +105,9 @@ const messages = {
     events: 'Events',
     artifacts: 'Artifacts',
     localWorkflows: 'Local Workflows',
+    workers: 'AI Workers',
+    available: 'available',
+    unavailable: 'unavailable',
     workflowDetected: 'Local workflow library detected',
     workflowMissing: 'Local workflow library not detected',
     workflowCommands: 'Command index',
@@ -121,6 +129,7 @@ const messages = {
     slugPlaceholder: 'short-english-desc',
     mrContext: 'Generate MR context',
     runLocalDryRun: 'Run local dry-run',
+    runMvpFlow: 'Run minimal MVP flow',
     noTasksYet: 'No tasks yet.',
     noDescription: 'No description.',
     noEvents: 'No events.',
@@ -152,12 +161,15 @@ const els = {
   artifacts: document.querySelector('#artifacts'),
   workflowRefreshButton: document.querySelector('#workflowRefreshButton'),
   workflowIndex: document.querySelector('#workflowIndex'),
+  workerRefreshButton: document.querySelector('#workerRefreshButton'),
+  workerList: document.querySelector('#workerList'),
   dryRunForm: document.querySelector('#dryRunForm'),
   dryRunProduct: document.querySelector('#dryRunProduct'),
   dryRunComponents: document.querySelector('#dryRunComponents'),
   dryRunCustomer: document.querySelector('#dryRunCustomer'),
   dryRunSlug: document.querySelector('#dryRunSlug'),
   dryRunMrContext: document.querySelector('#dryRunMrContext'),
+  runMvpFlowButton: document.querySelector('#runMvpFlowButton'),
 };
 
 function detectLocale() {
@@ -190,6 +202,7 @@ function toggleLocale() {
   applyI18n();
   renderTasks();
   renderWorkflowIndex();
+  renderWorkers();
   if (state.selectedPayload) renderDetail(state.selectedPayload);
 }
 
@@ -239,6 +252,31 @@ async function loadLocalWorkflows() {
   } catch (error) {
     console.error(error);
   }
+}
+
+async function loadWorkers() {
+  try {
+    const data = await request('/api/workers');
+    state.workers = data.workers || [];
+    renderWorkers();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function renderWorkers() {
+  if (!els.workerList) return;
+  if (!state.workers.length) {
+    els.workerList.innerHTML = '<div class="task-meta">-</div>';
+    return;
+  }
+  els.workerList.innerHTML = state.workers.map((worker) => `
+    <div class="workflow-item">
+      <div class="artifact-title">${escapeHtml(worker.name)} · ${worker.available ? t('available') : t('unavailable')}</div>
+      <div class="artifact-path">${escapeHtml(worker.role)}</div>
+      <div class="event-body">${escapeHtml(worker.note || '')}</div>
+    </div>
+  `).join('');
 }
 
 function renderWorkflowIndex() {
@@ -425,6 +463,17 @@ async function runLocalDryRun(event) {
   await loadTasks();
 }
 
+async function runMvpFlow() {
+  if (!state.selectedTaskId) return;
+  const payload = readDryRunSettings();
+  saveDryRunSettings();
+  await request(`/api/tasks/${encodeURIComponent(state.selectedTaskId)}/mvp-flow`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  await loadTasks();
+}
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll('&', '&amp;')
@@ -437,7 +486,9 @@ function escapeHtml(value) {
 els.taskForm.addEventListener('submit', createTask);
 els.refreshButton.addEventListener('click', loadTasks);
 els.workflowRefreshButton.addEventListener('click', loadLocalWorkflows);
+els.workerRefreshButton.addEventListener('click', loadWorkers);
 els.dryRunForm.addEventListener('submit', runLocalDryRun);
+els.runMvpFlowButton.addEventListener('click', runMvpFlow);
 els.languageButton.addEventListener('click', toggleLocale);
 document.querySelectorAll('[data-actor]').forEach((button) => {
   button.addEventListener('click', () => runStep(button.dataset.actor));
@@ -447,3 +498,4 @@ applyI18n();
 loadDryRunSettings();
 loadTasks();
 loadLocalWorkflows();
+loadWorkers();

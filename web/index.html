@@ -60,6 +60,14 @@
           </div>
           <div id="workflowIndex" class="workflow-index"></div>
         </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <h2 data-i18n="workers">AI 员工</h2>
+            <button class="secondary" id="workerRefreshButton" type="button" data-i18n="refresh">刷新</button>
+          </div>
+          <div id="workerList" class="workflow-index"></div>
+        </section>
       </section>
 
       <section class="content">
@@ -99,6 +107,7 @@
               <span data-i18n="mrContext">生成 MR 上下文</span>
             </label>
             <button type="submit" data-i18n="runLocalDryRun">运行本地 dry-run</button>
+            <button id="runMvpFlowButton" type="button" data-i18n="runMvpFlow">运行最小 MVP 闭环</button>
           </form>
 
           <div class="role-grid" id="roleGrid"></div>
