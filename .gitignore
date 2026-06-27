@@ -1,0 +1,32 @@
+# Runtime data
+tasks/
+knowledge/
+logs/
+reports/
+
+# Local and secret config
+.env
+.env.*
+config/*.local.json
+config/*.secret.json
+config/*.token
+config/*.key
+config/*.pem
+config/privacy_patterns.local.txt
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Generated logs and artifacts
+*.log
+*.patch
+*.sqlite
+*.db

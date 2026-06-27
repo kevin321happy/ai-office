@@ -1,0 +1,27 @@
+{
+  "workspace": {
+    "tasks_dir": "tasks",
+    "knowledge_dir": "knowledge",
+    "reports_dir": "reports"
+  },
+  "workers": {
+    "codex": {
+      "enabled": true,
+      "command": "codex"
+    },
+    "claude": {
+      "enabled": true,
+      "command": "claude"
+    },
+    "cursor": {
+      "enabled": false,
+      "command": "cursor"
+    }
+  },
+  "safety": {
+    "require_review_for_code_changes": true,
+    "require_validation_before_completion": true,
+    "never_commit_runtime_data": true
+  }
+}
+
